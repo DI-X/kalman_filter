@@ -12,21 +12,23 @@ class test_klman:
 
         self.B=np.array([self.dt*self.dt/2, self.dt])
 
-        self.H = np.array([[1,0],
-                          [0,1]])
+        # self.H = np.array([[1,0],
+        #                   [0,1]])
 
-        # self.H = np.array([1,0])
+        self.H = np.array([1,0])
 
         self.Q=np.array([[1,0],
                          [0,1]])
 
-        self.R=np.array([[1,0],
-                         [0,1]])
+        # self.R=np.array([[1,0],
+        #                  [0,1]]) # measurement noise
 
-        self.X_pri = np.zeros(2)
-        self.X_pos = np.zeros(2)
+        self.R= 20000   # measurement noise
 
-        self.X_act = np.array([0,0.0])
+        self.X_pri = np.array([3,0.3])
+        self.X_pos = np.array([3,0.3])
+
+        self.X_act = np.array([3,0.3])
 
         self.P_pri = np.zeros([2,2])
         self.P_pos = np.zeros([2,2])
@@ -38,10 +40,10 @@ class test_klman:
     def estmate(self, z, acc):
         self.X_pri = self.F @ self.X_pos + self.B * acc
         self.P_pri = self.F @ self.P_pos @ self.F.T + self.Q
-        K_gain = self.P_pri @ self.H.T @ np.linalg.inv(self.H @ self.P_pri @ self.H.T + self.R)
+        K_gain = self.P_pri @ self.H.T / (self.H @ self.P_pri @ self.H.T + self.R)
 
-        self.X_pos = self.X_pri + K_gain @ (z - self.H @ self.X_pri)
-        self.P_pos = self.P_pri - K_gain @ self.H @ self.P_pri
+        self.X_pos = self.X_pri + K_gain.dot(z - self.H.dot( self.X_pri))
+        self.P_pos = self.P_pri - K_gain.dot(self.H.dot(self.P_pri))
 
         return self.X_pos
 
@@ -50,6 +52,7 @@ class test_klman:
         self.t = self.dt* self.counter
 
     def run(self):
+
         self.updateCounter()
         mag = 1
         acc = mag * np.sin(2*np.pi*self.t)
@@ -58,9 +61,9 @@ class test_klman:
         noise_ran = np.array([random.random(), random.random()])
         noise_gus = np.array([nr.normal(loc=0, scale=1),nr.normal(loc=0, scale=1)])
 
-        z = self.X_act #+ noise_gus
+        z = self.X_act + noise_gus
 
-        est = self.estmate(z,acc)
+        est = self.estmate(z[0],acc)
 
         data = list()
         data.append(str(self.t))
@@ -95,7 +98,7 @@ class test_klman:
 
 obj = test_klman()
 
-while obj.t<15:
+while obj.t<55:
     obj.run()
 obj.logData()
 
